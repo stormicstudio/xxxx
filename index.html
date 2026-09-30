@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e9e7dc">
+  <title>Последний маршрут — ночной забег</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #e9e7dc;
+      --ink: #202c2a;
+      --muted: #697571;
+      --line: #c9cec2;
+      --lime: #d3f078;
+      --coral: #fa7458;
+      --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#7380781b .7px, transparent .7px);
+      background-size: 7px 7px;
+      font-family: var(--mono);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; }
+
+    .page-shell {
+      width: min(1120px, calc(100% - 64px));
+      margin: 0 auto;
+      padding: 25px 0 22px;
+    }
+
+    .topline, .bottomline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 32px;
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .topline { border-bottom: 1px solid var(--line); padding-bottom: 13px; }
+    .masthead-mark { display: inline-flex; align-items: center; gap: 9px; color: var(--ink); }
+    .mark { width: 10px; height: 10px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 4px #fa745825; }
+    .live-note { display: flex; align-items: center; gap: 9px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: #8bb75f; }
+
+    .intro {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 24px 0 17px;
+    }
+
+    .eyebrow {
+      margin: 0 0 6px;
+      color: #78817a;
+      font-size: 10px;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-family: var(--serif);
+      font-size: clamp(35px, 5vw, 56px);
+      font-weight: 500;
+      letter-spacing: 0;
+      line-height: .98;
+    }
+
+    .edition {
+      flex: 0 0 auto;
+      margin-bottom: 5px;
+      padding: 9px 11px;
+      border: 1px solid var(--line);
+      color: #59635d;
+      font-size: 10px;
+      letter-spacing: .04em;
+    }
+
+    .game-frame {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #344541;
+      background: #8ca9a6;
+      box-shadow: 0 18px 44px #1a1f4a40, 0 0 0 1px #ffffff10 inset;
+      isolation: isolate;
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 1000 / 380;
+      touch-action: none;
+    }
+
+    .hud {
+      position: absolute;
+      z-index: 2;
+      top: 18px;
+      right: 21px;
+      left: 21px;
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      color: #f6f1d9;
+      text-shadow: 0 1px 8px #070d1ecc;
+      pointer-events: none;
+    }
+
+    .hud-label {
+      display: block;
+      margin-bottom: 5px;
+      color: #e1e6d6b5;
+      font-size: 9px;
+      letter-spacing: .15em;
+    }
+
+    .hud-value {
+      font-size: 18px;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .04em;
+    }
+
+    .hud-best { text-align: right; }
+    .pause-button {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      margin-left: 17px;
+      place-items: center;
+      border: 1px solid #eaf0d252;
+      color: #f6f1d9;
+      background: #1f383857;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background-color .16s ease, border-color .16s ease;
+    }
+
+    .pause-button:hover { border-color: #eaf0d2; background: #1f3838a8; }
+    .pause-bars { display: flex; gap: 4px; }
+    .pause-bars span { display: block; width: 3px; height: 11px; background: currentColor; }
+    .play-triangle {
+      width: 0;
+      height: 0;
+      margin-left: 2px;
+      border-top: 6px solid transparent;
+      border-bottom: 6px solid transparent;
+      border-left: 9px solid currentColor;
+    }
+
+    .overlay {
+      position: absolute;
+      z-index: 1;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      justify-items: center;
+      padding: 70px 20px 24px;
+      color: #f8f3dd;
+      text-align: center;
+      background: radial-gradient(ellipse at center, #0a112899, #0a112855 70%);
+      text-shadow: 0 2px 14px #070d1ecc;
+      transition: opacity .2s ease, visibility .2s ease;
+    }
+
+    .overlay[hidden] { display: none; }
+    .overlay-kicker { margin: 0 0 6px; color: var(--lime); font-size: 10px; letter-spacing: .17em; text-transform: uppercase; }
+    .overlay-title { margin: 0 0 16px; font-family: var(--serif); font-size: clamp(28px, 4vw, 43px); font-weight: 500; line-height: 1; }
+    .start-button {
+      min-height: 46px;
+      padding: 0 20px;
+      border: 1px solid var(--lime);
+      color: #233332;
+      background: var(--lime);
+      font-size: 11px;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform .16s ease, background-color .16s ease;
+    }
+
+    .start-button:hover { transform: translateY(-2px); background: #e2ff9b; }
+    .start-button:focus-visible, .pause-button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+
+    .control-strip {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 61px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .controls, .run-state { display: flex; align-items: center; gap: 9px; }
+    .control-label, .run-state { color: var(--muted); font-size: 10px; }
+    .keycap {
+      display: inline-grid;
+      min-width: 54px;
+      height: 26px;
+      padding: 0 8px;
+      place-items: center;
+      border: 1px solid #bfc6b9;
+      border-bottom-width: 2px;
+      color: #384440;
+      background: #f4f2e8;
+      font-size: 9px;
+    }
+
+    .run-state { gap: 7px; }
+    .state-led { width: 7px; height: 7px; border-radius: 50%; background: #9aa39a; }
+    .run-state[data-state="playing"] .state-led { background: #7eaa56; box-shadow: 0 0 0 3px #7eaa5628; }
+    .run-state[data-state="paused"] .state-led { background: #e5a755; }
+    .run-state[data-state="over"] .state-led { background: var(--coral); }
+
+    .bottomline { padding-top: 16px; font-size: 9px; }
+    .route-code { color: #858e85; }
+
+    @media (max-width: 600px) {
+      .page-shell { width: calc(100% - 32px); padding-top: 15px; }
+      .topline, .bottomline { font-size: 8px; }
+      .intro { padding-top: 21px; }
+      h1 { font-size: clamp(31px, 9vw, 44px); }
+      .edition { padding: 7px; font-size: 8px; }
+      .hud { top: 12px; right: 12px; left: 12px; }
+      .hud-label { font-size: 7px; }
+      .hud-value { font-size: 14px; }
+      .pause-button { width: 30px; height: 30px; margin-left: 10px; }
+      .overlay { padding-top: 55px; }
+      .overlay-title { margin-bottom: 10px; }
+      .start-button { min-height: 39px; padding: 0 13px; font-size: 9px; }
+      .control-strip { min-height: 54px; gap: 8px; }
+      .controls { gap: 6px; }
+      .control-label, .run-state { font-size: 8px; }
+      .keycap { min-width: 45px; height: 23px; font-size: 8px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page-shell">
+    <header class="topline">
+      <div class="masthead-mark"><span class="mark" aria-hidden="true"></span><span>Полуночная почта</span></div>
+      <div class="live-note"><span class="live-dot" aria-hidden="true"></span><span>Смена началась · 23:48</span></div>
+    </header>
+
+    <section class="intro" aria-labelledby="pageTitle">
+      <div>
+        <p class="eyebrow">Ночной маршрут № 09 · город не спит</p>
+        <h1 id="pageTitle">Последний маршрут</h1>
+      </div>
+      <div class="edition">АРХИВ СМЕНЫ&nbsp; / &nbsp;001</div>
+    </section>
+
+    <section class="game-frame" aria-label="Игровое поле">
+      <canvas id="gameCanvas" width="1000" height="380" aria-label="Курьер бежит по ночному городу. Перепрыгивайте препятствия."></canvas>
+      <div class="hud">
+        <div><span class="hud-label">ДИСТАНЦИЯ</span><span class="hud-value" id="score">00000</span></div>
+        <div style="display:flex;align-items:flex-start">
+          <div class="hud-best"><span class="hud-label">РЕКОРД</span><span class="hud-value" id="best">00000</span></div>
+          <button class="pause-button" id="pauseButton" type="button" aria-label="Пауза" title="Пауза">
+            <span class="pause-bars" aria-hidden="true"><span></span><span></span></span>
+          </button>
+        </div>
+      </div>
+      <div class="overlay" id="overlay">
+        <p class="overlay-kicker" id="overlayKicker">До рассвета ещё есть время</p>
+        <h2 class="overlay-title" id="overlayTitle">Доставим всё.</h2>
+        <button class="start-button" id="startButton" type="button">Начать забег</button>
+      </div>
+    </section>
+
+    <div class="control-strip">
+      <div class="controls"><span class="control-label">ПРЫЖОК</span><span class="keycap">SPACE</span><span class="keycap">↑</span></div>
+      <div class="run-state" id="runState" data-state="ready"><span class="state-led" aria-hidden="true"></span><span id="stateText">Ожидание</span></div>
+    </div>
+
+    <footer class="bottomline"><span>Каждый пакет должен найти свой дом.</span><span class="route-code">NIGHT SHIFT&nbsp; / &nbsp;CITY DIVISION</span></footer>
+  </main>
+
+  <script>
+    (() => {
+      const canvas = document.querySelector("#gameCanvas");
+      const context = canvas.getContext("2d");
+      const scoreDisplay = document.querySelector("#score");
+      const bestDisplay = document.querySelector("#best");
+      const overlay = document.querySelector("#overlay");
+      const overlayKicker = document.querySelector("#overlayKicker");
+      const overlayTitle = document.querySelector("#overlayTitle");
+      const startButton = document.querySelector("#startButton");
+      const pauseButton = document.querySelector("#pauseButton");
+      const pauseIcon = pauseButton.querySelector(".pause-bars");
+      const runState = document.querySelector("#runState");
+      const stateText = document.querySelector("#stateText");
+      const width = 1000;
+      const height = 380;
+      const ground = 304;
+      const courierX = 148;
+      const hash = (n) => { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); };
+      const clamp01 = (v) => Math.max(0, Math.min(1, v));
+      const stars = Array.from({ length: 90 }, (_, index) => ({
+        x: hash(index * 1.7) * width,
+        y: 14 + hash(index * 2.9 + 5) * 200,
+        radius: index % 9 === 0 ? 1.8 : index % 3 === 0 ? 1.2 : .8
+      }));
+
+      let state = "ready";
+      let score = 0;
+      let best = Number(localStorage.getItem("night-route-best") || 0);
+      let elapsed = 0;
+      let ambientTime = 0;
+      let spawnIn = 1.25;
+      let meteorSpawnIn = 2.2;
+      let worldOffset = 0;
+      let lastFrame = 0;
+      let runner = { y: ground, velocity: 0, onGround: true };
+      let obstacles = [];
+      let meteors = [];
+      let displayedScore = 0;
+      let paletteStep = -1;
+      let scenePalette = {};
+      let scroll = 0;
+      let dust = [];
+      let dustIn = 0;
+      let currentNight = 1;
+
+      bestDisplay.textContent = String(best).padStart(5, "0");
+
+      function setState(nextState) {
+        state = nextState;
+        runState.dataset.state = nextState;
+        stateText.textContent = ({ ready: "Ожидание", playing: "В пути", paused: "Пауза", over: "Маршрут завершён" })[nextState];
+        pauseButton.setAttribute("aria-label", nextState === "paused" ? "Продолжить" : "Пауза");
+        pauseButton.title = nextState === "paused" ? "Продолжить" : "Пауза";
+        pauseIcon.innerHTML = nextState === "paused" ? '<span class="play-triangle"></span>' : "<span></span><span></span>";
+      }
+
+      function showOverlay(kicker, title, buttonText) {
+        overlayKicker.textContent = kicker;
+        overlayTitle.textContent = title;
+        startButton.textContent = buttonText;
+        overlay.hidden = false;
+      }
+
+      function beginRun() {
+        if (state === "playing") return;
+        score = 0;
+        elapsed = 0;
+        spawnIn = 1.15;
+        meteorSpawnIn = 2.2;
+        obstacles = [];
+        meteors = [];
+        dust = [];
+        runner = { y: ground, velocity: 0, onGround: true };
+        displayedScore = 0;
+        scoreDisplay.textContent = "00000";
+        overlay.hidden = true;
+        setState("playing");
+      }
+
+      function jump() {
+        if (state === "ready" || state === "over") {
+          beginRun();
+          return;
+        }
+        if (state === "playing" && runner.onGround) {
+          runner.velocity = -650;
+          runner.onGround = false;
+        }
+      }
+
+      function togglePause() {
+        if (state === "playing") {
+          setState("paused");
+          showOverlay("Передышка", "Пауза", "Продолжить маршрут");
+        } else if (state === "paused") {
+          overlay.hidden = true;
+          setState("playing");
+        }
+      }
+
+      function endRun() {
+        setState("over");
+        const roundedScore = Math.floor(score);
+        if (roundedScore > best) {
+          best = roundedScore;
+          bestDisplay.textContent = String(best).padStart(5, "0");
+          try { localStorage.setItem("night-route-best", String(best)); } catch { /* Storage may be unavailable. */ }
+          showOverlay("Новый рекорд · " + String(best).padStart(5, "0"), "Вот это смена.", "Ещё один забег");
+        } else {
+          showOverlay("Маршрут пройден · " + String(roundedScore).padStart(5, "0"), "Почти рассвет.", "Попробовать снова");
+        }
+      }
+
+      function update(delta) {
+        elapsed += delta;
+        const speed = Math.min(390 + elapsed * 13, 720);
+        score += delta * speed * .038;
+        worldOffset = (worldOffset + speed * delta) % 1000;
+        scroll += speed * delta;
+        const roundedScore = Math.floor(score);
+        if (roundedScore !== displayedScore) {
+          displayedScore = roundedScore;
+          scoreDisplay.textContent = String(roundedScore).padStart(5, "0");
+        }
+
+        runner.velocity += 1900 * delta;
+        runner.y = Math.min(ground, runner.y + runner.velocity * delta);
+        if (runner.y === ground) {
+          runner.velocity = 0;
+          runner.onGround = true;
+        }
+
+        dustIn -= delta;
+        if (runner.onGround && dustIn <= 0) {
+          dust.push({ x: courierX + 16, y: ground - 3, vx: -(60 + Math.random() * 60), vy: -(10 + Math.random() * 30), life: .45, age: 0, size: 2 + Math.random() * 3 });
+          dustIn = .055;
+        }
+        for (const puff of dust) {
+          puff.age += delta;
+          puff.x += puff.vx * delta;
+          puff.y += puff.vy * delta;
+        }
+        dust = dust.filter((puff) => puff.age < puff.life);
+
+        spawnIn -= delta;
+        if (spawnIn <= 0) {
+          const kind = Math.random() > .52 ? "crate" : "cone";
+          obstacles.push({ x: width + 30, kind });
+          spawnIn = 1.12 + Math.random() * .72 - Math.min(elapsed * .006, .25);
+        }
+
+        for (const obstacle of obstacles) obstacle.x -= speed * delta;
+        obstacles = obstacles.filter((obstacle) => obstacle.x > -65);
+
+        meteorSpawnIn -= delta;
+        const daylight = (Math.sin(ambientTime * Math.PI * 2 / 72 - Math.PI / 2) + 1) / 2;
+        if (meteorSpawnIn <= 0) {
+          if (Math.random() > daylight * .72) {
+            meteors.push({
+              x: 460 + Math.random() * 440,
+              y: 16 + Math.random() * 88,
+              vx: 180 + Math.random() * 80,
+              vy: 105 + Math.random() * 55,
+              size: 5 + Math.random() * 3
+            });
+          }
+          meteorSpawnIn = 1.8 + Math.random() * 2.2;
+        }
+        for (const meteor of meteors) {
+          meteor.x -= meteor.vx * delta;
+          meteor.y += meteor.vy * delta;
+        }
+        meteors = meteors.filter((meteor) => meteor.x > -30 && meteor.y < ground + 20);
+
+        for (const obstacle of obstacles) {
+          const obstacleWidth = obstacle.kind === "crate" ? 36 : 30;
+          const obstacleHeight = obstacle.kind === "crate" ? 39 : 43;
+          const runnerLeft = courierX + 6;
+          const runnerRight = courierX + 70;
+          const runnerTop = runner.y - 106;
+          if (runnerRight > obstacle.x + 4 && runnerLeft < obstacle.x + obstacleWidth - 4 &&
+              runner.y > ground - obstacleHeight && runnerTop < ground) {
+            endRun();
+            break;
+          }
+        }
+
+        for (const meteor of meteors) {
+          const runnerLeft = courierX + 7;
+          const runnerRight = courierX + 70;
+          const runnerTop = runner.y - 106;
+          if (meteor.x + meteor.size > runnerLeft && meteor.x - meteor.size < runnerRight &&
+              meteor.y + meteor.size > runnerTop && meteor.y - meteor.size < runner.y - 4) {
+            endRun();
+            break;
+          }
+        }
+      }
+
+      function drawBackground() {
+        const ctx = context;
+        const cycle = (Math.sin(ambientTime * Math.PI * 2 / 72 - Math.PI / 2) + 1) / 2;
+        const night = 1 - cycle;
+        const p = getScenePalette(cycle);
+        currentNight = night;
+
+        ctx.fillStyle = p.sky;
+        ctx.fillRect(0, 0, width, height);
+
+        if (night > .02) {
+          ctx.save();
+          ctx.globalAlpha = night;
+          const a = ctx.createRadialGradient(730, 60, 10, 730, 60, 280);
+          a.addColorStop(0, "rgba(150,110,255,.34)");
+          a.addColorStop(1, "rgba(150,110,255,0)");
+          ctx.fillStyle = a;
+          ctx.fillRect(0, 0, width, height);
+          const b = ctx.createRadialGradient(240, 120, 10, 240, 120, 240);
+          b.addColorStop(0, "rgba(60,220,230,.22)");
+          b.addColorStop(1, "rgba(60,220,230,0)");
+          ctx.fillStyle = b;
+          ctx.fillRect(0, 0, width, height);
+          ctx.restore();
+        }
+
+        ctx.fillStyle = "#fff6dc";
+        const starVisibility = clamp01(night * 1.5 - .1);
+        for (const star of stars) {
+          ctx.globalAlpha = starVisibility * (.5 + Math.sin(ambientTime * 2 + star.x) * .3);
+          ctx.beginPath();
+          ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        drawCelestialBodies(night);
+        drawClouds(p.clouds, night);
+
+        ctx.fillStyle = p.mountains;
+        ctx.beginPath();
+        ctx.moveTo(0, height);
+        for (let x = 0; x <= width; x += 10) {
+          const wx = x + scroll * .05;
+          ctx.lineTo(x, 205 - Math.abs(Math.sin(wx * .0052)) * 58 - Math.abs(Math.sin(wx * .013 + 1.3)) * 16);
+        }
+        ctx.lineTo(width, height);
+        ctx.closePath();
+        ctx.fill();
+
+        drawCity(250, p.farCity, 46, .12, 40, 90, 11, p, night, false);
+        ctx.fillStyle = p.fogMid;
+        ctx.fillRect(0, 130, width, ground - 130);
+        drawCity(296, p.nearCity, 34, .3, 50, 110, 3, p, night, true);
+        ctx.fillStyle = p.fogLow;
+        ctx.fillRect(0, 236, width, ground - 236);
+
+        drawLamps(p, night);
+
+        ctx.fillStyle = p.roadGrad;
+        ctx.fillRect(0, ground, width, height - ground);
+        ctx.fillStyle = p.curb;
+        ctx.fillRect(0, ground, width, 3);
+        ctx.fillStyle = p.curbLight;
+        ctx.fillRect(0, ground + 3, width, 1);
+        ctx.fillStyle = p.markings;
+        for (let x = -(scroll % 120); x < width; x += 120) ctx.fillRect(x, ground + 40, 56, 3);
+        ctx.fillStyle = p.seam;
+        ctx.fillRect(0, ground + 66, width, 1);
+      }
+
+      function getScenePalette(daylight) {
+        const step = Math.round(daylight * 40) / 40;
+        if (step !== paletteStep) {
+          const mix = (night, day) => blendColor(night, day, step);
+          const sky = context.createLinearGradient(0, 0, 0, height);
+          sky.addColorStop(0, mix("#0b1233", "#4f9bd0"));
+          sky.addColorStop(.5, mix("#33307a", "#a6d3d8"));
+          sky.addColorStop(.82, mix("#b8508a", "#f5d9a4"));
+          sky.addColorStop(1, mix("#ff8a6b", "#fbe3b0"));
+          const fog = mix("#4b3f8f", "#e6e3c8");
+          const fogMid = context.createLinearGradient(0, 130, 0, ground);
+          fogMid.addColorStop(0, fog + "00");
+          fogMid.addColorStop(1, fog + "b0");
+          const fogLow = context.createLinearGradient(0, 236, 0, ground);
+          fogLow.addColorStop(0, fog + "00");
+          fogLow.addColorStop(1, fog + "70");
+          const roadGrad = context.createLinearGradient(0, ground, 0, height);
+          roadGrad.addColorStop(0, mix("#161a33", "#3d4b4d"));
+          roadGrad.addColorStop(1, mix("#090c1c", "#2b3739"));
+          scenePalette = {
+            sky, fogMid, fogLow, roadGrad,
+            mountains: mix("#2a2568", "#94b5b3"),
+            farCity: mix("#2b2f6b", "#86a79f"),
+            nearCity: mix("#151b3f", "#4d6b66"),
+            roofRim: mix("#6c72d8", "#a7c4b6"),
+            lampPole: mix("#0e1226", "#33403f"),
+            curb: mix("#ff6f91", "#d99a6c"),
+            curbLight: mix("#ffc0d0", "#f2d2ae"),
+            markings: mix("#6a70b0", "#b3bca6"),
+            seam: mix("#2a2f55", "#5b6a66"),
+            windows: mix("#ffc46b", "#f6e0a0"),
+            clouds: mix("#8a83c8", "#fff3dc")
+          };
+          paletteStep = step;
+        }
+        return scenePalette;
+      }
+
+      function blendColor(night, day, amount) {
+        const from = night.match(/[\da-f]{2}/gi).map((value) => parseInt(value, 16));
+        const to = day.match(/[\da-f]{2}/gi).map((value) => parseInt(value, 16));
+        return "#" + from.map((value, index) => Math.round(value + (to[index] - value) * amount).toString(16).padStart(2, "0")).join("");
+      }
+
+      function drawCelestialBodies(night) {
+        const ctx = context;
+        const theta = ambientTime * Math.PI * 2 / 72 - Math.PI / 2;
+        const sunX = 500 - 560 * Math.cos(theta);
+        const sunY = 245 - 205 * Math.sin(theta);
+        const moonX = 500 + 560 * Math.cos(theta);
+        const moonY = 245 + 205 * Math.sin(theta);
+
+        if (moonY < 260) {
+          ctx.save();
+          ctx.globalAlpha = clamp01(night * 1.6);
+          const glow = ctx.createRadialGradient(moonX, moonY, 10, moonX, moonY, 110);
+          glow.addColorStop(0, "rgba(255,244,200,.45)");
+          glow.addColorStop(1, "rgba(255,244,200,0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(moonX, moonY, 110, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#f7f0d0";
+          ctx.beginPath();
+          ctx.arc(moonX, moonY, 26, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#dcd4b0";
+          for (const [dx, dy, r] of [[-8, -6, 5], [9, 7, 4], [-2, 12, 3]]) {
+            ctx.beginPath();
+            ctx.arc(moonX + dx, moonY + dy, r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+
+        if (sunY < 260) {
+          ctx.save();
+          const glow = ctx.createRadialGradient(sunX, sunY, 10, sunX, sunY, 170);
+          glow.addColorStop(0, "rgba(255,205,125,.6)");
+          glow.addColorStop(1, "rgba(255,205,125,0)");
+          ctx.fillStyle = glow;
+          ctx.beginPath();
+          ctx.arc(sunX, sunY, 170, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "#fff0bd";
+          ctx.beginPath();
+          ctx.arc(sunX, sunY, 30, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+
+      function drawClouds(cloudColor, night) {
+        for (let index = 0; index < 4; index++) {
+          const x = ((index * 287 + ambientTime * (8 + index * 2)) % (width + 180)) - 90;
+          const y = 70 + (index % 3) * 34;
+          const scale = .55 + (index % 2) * .22;
+          context.save();
+          context.translate(x, y);
+          context.scale(scale, scale);
+          context.globalAlpha = .7 - night * .3;
+          context.fillStyle = cloudColor;
+          context.beginPath();
+          context.arc(0, 8, 17, 0, Math.PI * 2);
+          context.arc(19, 0, 23, 0, Math.PI * 2);
+          context.arc(44, 9, 16, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        }
+      }
+
+      function drawCity(baseline, color, step, parallax, minH, rangeH, seed, p, night, near) {
+        const ctx = context;
+        const shift = scroll * parallax;
+        const first = Math.floor(shift / step) - 1;
+        const count = Math.ceil(width / step) + 3;
+        const lit = [];
+        const signs = [];
+        ctx.fillStyle = color;
+        ctx.fillRect(0, baseline - minH + 6, width, ground - baseline + minH - 6);
+        for (let i = first; i < first + count; i++) {
+          const x = i * step - shift;
+          const bw = step - 3 - Math.floor(hash(i * 3.1 + seed) * 8);
+          const bh = minH + hash(i + seed) * rangeH;
+          const top = baseline - bh;
+          ctx.fillStyle = color;
+          ctx.fillRect(x, top, bw, ground - top);
+          if (hash(i * 5.7 + seed) > .8) ctx.fillRect(x + bw / 2 - 1, top - 14, 2, 14);
+          if (near) {
+            ctx.fillStyle = p.roofRim;
+            ctx.fillRect(x, top, bw, 1.5);
+          }
+          const cols = Math.floor((bw - 8) / 9);
+          const rows = Math.floor((bh - 12) / 13);
+          for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+              if (hash(i * 31 + c * 7 + r * 13 + seed) > .5) lit.push(x + 5 + c * 9, top + 8 + r * 13);
+            }
+          }
+          if (near && hash(i * 9.3 + seed) > .8) signs.push(x + bw - 7, top + 12, Math.floor(hash(i * 2.2) * 3));
+        }
+        ctx.globalAlpha = (near ? .22 : .12) + night * (near ? .78 : .5);
+        ctx.fillStyle = p.windows;
+        ctx.beginPath();
+        for (let k = 0; k < lit.length; k += 2) ctx.rect(lit[k], lit[k + 1], 4, 6);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+        const neon = ["#ff4f9a", "#3cf0ff", "#b8ff5a"];
+        for (let k = 0; k < signs.length; k += 3) {
+          ctx.save();
+          ctx.globalAlpha = .4 + night * .6;
+          ctx.shadowColor = neon[signs[k + 2]];
+          ctx.shadowBlur = 3 + night * 14;
+          ctx.fillStyle = neon[signs[k + 2]];
+          ctx.fillRect(signs[k], signs[k + 1], 5, 34);
+          ctx.restore();
+        }
+      }
+
+      function drawLamps(p, night) {
+        const ctx = context;
+        const spacing = 380;
+        const shift = scroll * .9;
+        const first = Math.floor(shift / spacing) - 1;
+        for (let i = first; i < first + 4; i++) {
+          const x = i * spacing - shift + 60;
+          const headX = x + 19;
+          const headY = ground - 114;
+          ctx.fillStyle = p.lampPole;
+          ctx.fillRect(x - 2, ground - 118, 4, 118);
+          ctx.fillRect(x - 2, ground - 120, 24, 3);
+          ctx.fillRect(x + 14, ground - 118, 10, 5);
+          if (night > .04) {
+            ctx.save();
+            ctx.globalAlpha = clamp01(night * 1.3);
+            const glow = ctx.createRadialGradient(headX, headY, 2, headX, headY, 120);
+            glow.addColorStop(0, "rgba(255,213,138,.6)");
+            glow.addColorStop(1, "rgba(255,213,138,0)");
+            ctx.fillStyle = glow;
+            ctx.beginPath();
+            ctx.arc(headX, headY, 120, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = "#fff2c8";
+            ctx.beginPath();
+            ctx.arc(headX, headY + 3, 3.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            ctx.save();
+            ctx.globalAlpha = clamp01(night * 1.3);
+            ctx.translate(headX, ground + 28);
+            ctx.scale(1, .26);
+            const pool = ctx.createRadialGradient(0, 0, 4, 0, 0, 110);
+            pool.addColorStop(0, "rgba(255,213,138,.5)");
+            pool.addColorStop(1, "rgba(255,213,138,0)");
+            ctx.fillStyle = pool;
+            ctx.beginPath();
+            ctx.arc(0, 0, 110, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+        }
+      }
+
+      function drawDust() {
+        context.fillStyle = "#d9ceb0";
+        for (const puff of dust) {
+          context.globalAlpha = (1 - puff.age / puff.life) * .5;
+          context.beginPath();
+          context.arc(puff.x, puff.y, puff.size * (1 + puff.age * 2), 0, Math.PI * 2);
+          context.fill();
+        }
+        context.globalAlpha = 1;
+      }
+
+      function drawCourier() {
+        const ctx = context;
+        const ink = "#101a24";
+        const runCycle = state === "playing" && runner.onGround ? Math.sin(elapsed * 17) : 0;
+        const footLift = Math.max(0, runCycle) * 7;
+        const footBack = Math.max(0, -runCycle) * 5;
+        const feetY = runner.y;
+
+        const halo = ctx.createRadialGradient(courierX + 40, feetY - 70, 8, courierX + 40, feetY - 70, 125);
+        halo.addColorStop(0, "rgba(255,232,180," + (.16 + currentNight * .26) + ")");
+        halo.addColorStop(1, "rgba(255,232,180,0)");
+        ctx.fillStyle = halo;
+        ctx.beginPath();
+        ctx.arc(courierX + 40, feetY - 70, 125, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#0a121c8c";
+        ctx.beginPath();
+        ctx.ellipse(courierX + 34, ground + 4, 38 - Math.max(0, ground - runner.y) * .05, 6, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.save();
+        ctx.translate(courierX, feetY);
+        ctx.scale(1.55, 1.42);
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+
+        const limb = (points, fill, outerWidth, innerWidth) => {
+          for (const [color, w] of [[ink, outerWidth], [fill, innerWidth]]) {
+            ctx.strokeStyle = color;
+            ctx.lineWidth = w;
+            ctx.beginPath();
+            points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+            ctx.stroke();
+          }
+        };
+        const shoe = (x, y) => {
+          ctx.fillStyle = "#d3f078";
+          ctx.strokeStyle = ink;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.ellipse(x + 2, y, 6, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        };
+
+        const legA = [[22, -20], [18 - runCycle * 5, -9 + footBack], [12 + runCycle * 5, -3 - footLift]];
+        const legB = [[37, -20], [42 + runCycle * 5, -10 + footLift], [47 - runCycle * 5, -3 - footBack]];
+        limb(legA, "#f0dfb2", 11, 7);
+        limb(legB, "#f0dfb2", 11, 7);
+        shoe(legA[2][0], legA[2][1]);
+        shoe(legB[2][0], legB[2][1]);
+
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 2.6;
+        ctx.fillStyle = "#d85845";
+        ctx.beginPath();
+        ctx.roundRect(8, -52, 13, 24, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = "#ff7a5c";
+        ctx.beginPath();
+        ctx.roundRect(13, -55, 33, 37, 11);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#f8e7bc";
+        ctx.fillRect(17, -43, 24, 4);
+        ctx.fillRect(35, -46, 8, 4);
+
+        ctx.fillStyle = "#f2c9a0";
+        ctx.beginPath();
+        ctx.arc(34, -67, 14, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#2b3a66";
+        ctx.beginPath();
+        ctx.arc(34, -69, 14, Math.PI, Math.PI * 2);
+        ctx.lineTo(47, -67);
+        ctx.lineTo(21, -67);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#d3f078";
+        ctx.fillRect(34, -70, 15, 3.5);
+        ctx.fillStyle = ink;
+        ctx.beginPath();
+        ctx.arc(41, -63, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+
+        limb([[17, -47], [8, -34 + runCycle * 2]], "#f2c9a0", 10, 6.5);
+        limb([[42, -46], [51, -56 - runCycle * 2]], "#f2c9a0", 10, 6.5);
+        ctx.fillStyle = "#d3f078";
+        ctx.strokeStyle = ink;
+        ctx.lineWidth = 2.4;
+        ctx.beginPath();
+        ctx.roundRect(40, -65 - runCycle * 2, 16, 14, 3);
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#6d7f42";
+        ctx.fillRect(43, -62 - runCycle * 2, 10, 2);
+
+        ctx.restore();
+      }
+
+      function drawMeteors() {
+        for (const meteor of meteors) {
+          context.save();
+          context.lineCap = "round";
+          const tailX = meteor.x + meteor.size * 9;
+          const tailY = meteor.y - meteor.size * 6.5;
+          const trail = context.createLinearGradient(tailX, tailY, meteor.x, meteor.y);
+          trail.addColorStop(0, "rgba(255,180,110,0)");
+          trail.addColorStop(1, "rgba(255,190,120,.95)");
+          context.strokeStyle = trail;
+          context.lineWidth = meteor.size * 1.5;
+          context.beginPath();
+          context.moveTo(tailX, tailY);
+          context.lineTo(meteor.x, meteor.y);
+          context.stroke();
+          context.shadowColor = "#ff9d4a";
+          context.shadowBlur = 16;
+          context.fillStyle = "#fff0c1";
+          context.beginPath();
+          context.arc(meteor.x, meteor.y, meteor.size, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        }
+      }
+
+      function drawObstacles() {
+        const ink = "#101a24";
+        const blink = Math.sin(ambientTime * 9) > 0;
+        for (const obstacle of obstacles) {
+          const isCrate = obstacle.kind === "crate";
+          const cx = obstacle.x + (isCrate ? 18 : 15);
+          const cy = ground - 22;
+          context.save();
+          const halo = context.createRadialGradient(cx, cy, 2, cx, cy, 62);
+          halo.addColorStop(0, "rgba(255,190,110," + (.16 + currentNight * .3) + ")");
+          halo.addColorStop(1, "rgba(255,190,110,0)");
+          context.fillStyle = halo;
+          context.beginPath();
+          context.arc(cx, cy, 62, 0, Math.PI * 2);
+          context.fill();
+
+          context.lineJoin = "round";
+          context.strokeStyle = ink;
+          context.lineWidth = 2.6;
+          if (isCrate) {
+            context.fillStyle = "#e0925f";
+            context.beginPath();
+            context.roundRect(obstacle.x, ground - 39, 36, 39, 4);
+            context.fill();
+            context.stroke();
+            context.strokeStyle = "#ffd9a0";
+            context.lineWidth = 2;
+            context.strokeRect(obstacle.x + 6, ground - 33, 24, 27);
+            context.beginPath();
+            context.moveTo(obstacle.x + 7, ground - 31);
+            context.lineTo(obstacle.x + 29, ground - 8);
+            context.moveTo(obstacle.x + 29, ground - 31);
+            context.lineTo(obstacle.x + 7, ground - 8);
+            context.stroke();
+          } else {
+            context.fillStyle = "#ff9a3c";
+            context.beginPath();
+            context.moveTo(obstacle.x + 15, ground - 44);
+            context.lineTo(obstacle.x + 30, ground);
+            context.lineTo(obstacle.x, ground);
+            context.closePath();
+            context.fill();
+            context.stroke();
+            context.fillStyle = "#fff4dc";
+            context.beginPath();
+            context.moveTo(obstacle.x + 9, ground - 26);
+            context.lineTo(obstacle.x + 22, ground - 26);
+            context.lineTo(obstacle.x + 25, ground - 16);
+            context.lineTo(obstacle.x + 6, ground - 16);
+            context.closePath();
+            context.fill();
+          }
+          context.shadowColor = "#ffb15a";
+          context.shadowBlur = blink ? 14 : 0;
+          context.fillStyle = blink ? "#fff0b0" : "#ffb15a";
+          context.beginPath();
+          context.arc(cx, ground - (isCrate ? 45 : 50), 3, 0, Math.PI * 2);
+          context.fill();
+          context.restore();
+        }
+      }
+
+      function drawVignette() {
+        const top = context.createLinearGradient(0, 0, 0, 90);
+        top.addColorStop(0, "rgba(6,10,26,.5)");
+        top.addColorStop(1, "rgba(6,10,26,0)");
+        context.fillStyle = top;
+        context.fillRect(0, 0, width, 90);
+        const edge = context.createRadialGradient(500, 190, 230, 500, 190, 620);
+        edge.addColorStop(0, "rgba(6,10,26,0)");
+        edge.addColorStop(1, "rgba(6,10,26,.38)");
+        context.fillStyle = edge;
+        context.fillRect(0, 0, width, height);
+      }
+
+      function render() {
+        context.setTransform(canvas.width / width, 0, 0, canvas.height / height, 0, 0);
+        drawBackground();
+        drawDust();
+        drawMeteors();
+        drawObstacles();
+        drawCourier();
+        drawVignette();
+      }
+
+      function frame(timestamp) {
+        const delta = Math.min((timestamp - lastFrame) / 1000 || 0, .05);
+        lastFrame = timestamp;
+        ambientTime += delta;
+        if (state === "playing") update(delta);
+        else if (state === "ready" || state === "over") scroll += 45 * delta;
+        render();
+        requestAnimationFrame(frame);
+      }
+
+      startButton.addEventListener("click", () => {
+        if (state === "paused") {
+          overlay.hidden = true;
+          setState("playing");
+        } else {
+          beginRun();
+        }
+      });
+
+      pauseButton.addEventListener("click", togglePause);
+      canvas.addEventListener("pointerdown", (event) => {
+        event.preventDefault();
+        jump();
+      });
+      document.addEventListener("keydown", (event) => {
+        if (event.code === "Space" || event.code === "ArrowUp" || event.code === "KeyW") {
+          event.preventDefault();
+          jump();
+        } else if (event.code === "KeyP" || event.code === "Escape") {
+          togglePause();
+        } else if (event.code === "Enter" && (state === "ready" || state === "over" || state === "paused")) {
+          startButton.click();
+        }
+      });
+
+      setState("ready");
+      requestAnimationFrame(frame);
+    })();
+  </script>
+</body>
+</html>
